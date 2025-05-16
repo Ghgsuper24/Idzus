@@ -1,0 +1,99 @@
+/*
+    Номер 4
+    Дан текстовый файл. Преобразовать строки файла, удалив после каждой цифры 2 символа,
+    если эти символы не буквы.
+
+*/
+
+#include <iostream>
+#include <fstream>
+#include <cctype>
+#include <string>
+#include <clocale>
+
+using namespace std;
+
+// Функция для преобразования строки: удаление символов после цифры
+string transformLine(const string& line)
+{
+    string result; // Переменная для хранения преобразованной строки
+    
+    // Проходим по каждому символу строки
+    for (size_t i = 0; i < line.length(); i++)
+    {
+        result += line[i]; // Добавляем текущий символ в результат
+        
+        // Проверяем, является ли символ цифрой
+        if (isdigit(line[i]))
+        {
+            int skip = 0; // Счётчик для проверки символов после цифры
+            
+            // Проверяем следующие два символа после цифры
+            for (int j = 1; j <= 2 && i + j < line.length(); j++)
+            {
+                // Если символ не является буквой, увеличиваем счётчик
+                if (!isalpha(line[i + j]))
+                {
+                    skip++;
+                }
+            }
+            // Если оба следующих символа не буквы, пропускаем их
+            if (skip == 2) i += 2;
+        }
+    }
+    return result; // Возвращаем преобразованную строку
+}
+
+// Основная функция задачи №4
+void task_04()
+{
+    setlocale(LC_ALL, "Rus");
+    string inputFileName = "input.txt";  // Имя входного файла
+    string outputFileName = "output.txt"; // Имя выходного файла
+
+    ifstream inputFile(inputFileName); // Открываем входной файл для чтения
+
+    // Если входной файл не найден, создаём пустой файл
+    if (!inputFile)
+    {
+        ofstream createInput(inputFileName);
+        if (createInput) 
+        {
+            cout << "Файл 'input.txt' создан. Заполните его данными и перезапустите программу." << endl;
+            createInput.close();
+        }
+        else 
+        {
+            cout << "Ошибка создания входного файла." << endl;
+        }
+        return;
+    }
+
+    ofstream outputFile(outputFileName); // Открываем выходной файл для записи
+    if (!outputFile)
+    {
+        cout << "Ошибка создания выходного файла." << endl;
+        return;
+    }
+
+    string line;
+    // Чтение каждой строки из входного файла
+    while (getline(inputFile, line))
+    {
+        string transformed = transformLine(line); // Преобразуем строку
+        outputFile << transformed << endl; // Записываем в выходной файл
+    }
+
+    // Закрываем файлы после обработки
+    inputFile.close();
+    outputFile.close();
+    cout << "Преобразование завершено. Результат сохранен в 'output.txt'" << endl;
+}
+
+// Главная функция программы
+int main()
+{
+    setlocale(LC_ALL, "Rus");
+    task_04(); // Запуск задачи №4
+    return 0;
+}

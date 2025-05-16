@@ -1,0 +1,108 @@
+/*
+    Номер 3
+
+    Дано дерево двоичного поиска. Если все элементы дерева кратны 7, то заменить все
+    отрицательные элементы их модулями.
+*/
+
+#include <iostream>
+#include <clocale>
+using namespace std;
+
+// Структура узла дерева
+struct Tree
+{
+    int data;               // Значение узла
+    Tree* left;             // Левый потомок
+    Tree* right;            // Правый потомок
+    // Конструктор узла с инициализацией
+    Tree(int value) : data(value), left(nullptr), right(nullptr) {}
+};
+
+// Функция для вставки элемента в дерево двоичного поиска
+Tree* insert(Tree* root, int value)
+{
+    // Если корень пуст, создаем новый узел
+    if (root == nullptr) return new Tree(value);
+    // Рекурсивно вставляем элемент в левое или правое поддерево
+    if (value < root->data)
+        root->left = insert(root->left, value);
+    else
+        root->right = insert(root->right, value);
+    return root;
+}
+
+// Функция для проверки кратности всех элементов 7
+bool Multi7(Tree* root)
+{
+    // Пустое дерево считается удовлетворяющим условию
+    if (root == nullptr) return true;
+    // Если хотя бы один элемент не кратен 7, возвращаем false
+    if (root->data % 7 != 0) return false;
+    // Рекурсивная проверка левого и правого поддерева
+    return Multi7(root->left) && Multi7(root->right);
+}
+
+// Замена всех отрицательных элементов на их модули
+void replaceAbs(Tree* root)
+{
+    if (root == nullptr) return;
+    // Если значение отрицательное, заменяем на модуль
+    if (root->data < 0) root->data = abs(root->data);
+    // Рекурсивная замена в левом и правом поддереве
+    replaceAbs(root->left);
+    replaceAbs(root->right);
+}
+
+// Обход дерева в порядке возрастания (симметричный обход)
+void inorder(Tree* root)
+{
+    if (root != nullptr)
+    {
+        inorder(root->left);           // Обход левого поддерева
+        cout << root->data << " ";     // Вывод значения текущего узла
+        inorder(root->right);          // Обход правого поддерева
+    }
+}
+
+// Основная функция для задачи №3
+void task_03()
+{
+    setlocale(LC_ALL, "Rus");
+    Tree* root = nullptr;
+    int n, value;
+
+    // Ввод количества элементов дерева
+    cout << "Введите количество элементов дерева: ";
+    cin >> n;
+    cout << "Введите элементы дерева:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> value;
+        root = insert(root, value);    // Вставка элемента в дерево
+    }
+
+    // Проверка на кратность всех элементов 7
+    if (Multi7(root))
+    {
+        replaceAbs(root);
+        cout << "\nВсе элементы дерева кратны 7. Отрицательные числа заменены модулями.\n";
+    }
+    else
+    {
+        cout << "\nНе все элементы дерева кратны 7. Замена не выполнена.\n";
+    }
+
+    // Вывод отсортированного дерева
+    cout << "\nОбход дерева по возрастанию:\n";
+    inorder(root);
+    cout << endl;
+}
+
+// Главная функция программы
+int main()
+{
+    setlocale(LC_ALL, "Rus");
+    task_03();   // Запуск задачи №3
+    return 0;
+}
