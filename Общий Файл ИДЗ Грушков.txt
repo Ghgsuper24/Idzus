@@ -1,0 +1,477 @@
+#include <iostream>
+#include <clocale>
+#include <ctime>
+#include <cmath>
+#include <list>
+#include <set>
+#include <vector>
+#include <fstream>
+#include <cctype>
+#include <string>
+
+using namespace std;
+
+// Прототипы всех задач
+void task_01();
+void task_02();
+void task_03();
+void task_04();
+void task_05();
+
+int main()
+{
+    setlocale(LC_ALL, "Rus");
+    unsigned int task;
+    for (;;) // бесконечный цикл
+    {
+        cout << "\n|----: МЕНЮ :----|\n" << endl;
+        cout << "1 - Задача №1. Динамические структуры. Списки." << endl;
+        cout << "2 - Задача №2. Двунаправленные списки. Кольца." << endl;
+        cout << "3 - Задача №3. Двоичные деревья." << endl;
+        cout << "4 - Задача №4. Файлы." << endl;
+        cout << "5 - Задача №5. Класс Vector." << endl;
+        cout << "0 - Выход из программы" << endl;
+        cout << "\nСделайте выбор: ";
+        cin >> task;
+
+        switch (task)
+        {
+        case 0: exit(0);
+        case 1: task_01(); break;
+        case 2: task_02(); break;
+        case 3: task_03(); break;
+        case 4: task_04(); break;
+        case 5: task_05(); break;
+        default: cout << "\nВыберите правильный вариант!\n";
+        }
+    }
+}
+
+/*
+
+    Номер 1
+    Дано два однонаправленных списка целых чисел.Сформировать третий список, содержащий
+    числа Фибоначчи исходных списков.
+
+*/
+
+// Функция для проверки, является ли число числом Фибоначчи
+bool Fib(int num)
+{
+    // Если число отрицательное, оно не может быть числом Фибоначчи
+    if (num < 0) return false;
+    int a = 0, b = 1;
+    // Проверка, пока текущее число Фибоначчи меньше проверяемого
+    while (b < num)
+    {
+        int temp = b;
+        b = a + b; // Переход к следующему числу Фибоначчи
+        a = temp;
+    }
+    // Возвращаем true, если число совпадает с Фибоначчи или равно нулю
+    return (b == num || num == 0);
+}
+
+// Функция для формирования списка чисел Фибоначчи из двух исходных списков
+list<int> FormList(const list<int>& l1, const list<int>& l2)
+{
+    list<int> result; // Итоговый список чисел Фибоначчи
+    set<int> uniqueNums; // Множество для исключения дубликатов
+
+    // Проверка чисел из первого списка
+    for (int num : l1)
+    {
+        if (Fib(num))
+        {
+            uniqueNums.insert(num); // Добавляем число, если оно является Фибоначчи
+        }
+    }
+
+    // Проверка чисел из второго списка
+    for (int num : l2)
+    {
+        if (Fib(num))
+        {
+            uniqueNums.insert(num); // Добавляем число, если оно является Фибоначчи
+        }
+    }
+
+    // Перенос уникальных чисел Фибоначчи в итоговый список
+    for (int num : uniqueNums)
+    {
+        result.push_back(num);
+    }
+    return result;
+}
+
+
+// Основная функция для выполнения задачи №1
+void task_01()
+{
+    setlocale(LC_ALL, "Rus");
+    cout << "\nФормирование списка чисел Фибоначчи из двух однонаправленных списков.\n";
+
+    list<int> list1, list2; // Два исходных списка
+    int n1, n2, num;
+
+    // Ввод первого списка чисел
+    cout << "Введите количество элементов первого списка: ";
+    cin >> n1;
+    cout << "Введите элементы первого списка:\n";
+    for (int i = 0; i < n1; i++)
+    {
+        cin >> num;
+        list1.push_back(num);
+    }
+
+    // Ввод второго списка чисел
+    cout << "Введите количество элементов второго списка: ";
+    cin >> n2;
+    cout << "Введите элементы второго списка:\n";
+    for (int i = 0; i < n2; i++)
+    {
+        cin >> num;
+        list2.push_back(num);
+    }
+
+    // Формирование списка чисел Фибоначчи
+    list<int> fibonacciList = FormList(list1, list2);
+
+    // Вывод чисел Фибоначчи из итогового списка
+    cout << "\nЧисла Фибоначчи из обоих списков:\n";
+    for (int num : fibonacciList)
+    {
+        cout << num << " ";
+    }
+    cout << endl;
+}
+
+
+
+
+
+
+
+
+
+
+/*
+    Номер 2
+
+    Дан двунаправленный список целых чисел. Переставить элементы списка так, чтобы сначала
+    следовали элементы, являющиеся числами Фибоначчи, а затем остальные элементы списка.
+
+*/
+
+// Функция для перестановки элементов двунаправленного списка
+list<int> reorderList(const list<int>& inputList)
+{
+    list<int> fibList;    // Список для чисел Фибоначчи
+    list<int> nonFibList; // Список для остальных чисел
+
+    // Перебор всех чисел из исходного списка
+    for (int num : inputList)
+    {
+        // Если число Фибоначчи, добавляем в соответствующий список
+        if (Fib(num))
+            fibList.push_back(num);
+        else
+            nonFibList.push_back(num);
+    }
+
+    // Объединяем два списка: сначала числа Фибоначчи, затем остальные
+    fibList.insert(fibList.end(), nonFibList.begin(), nonFibList.end());
+    return fibList;
+}
+
+// Основная функция для задачи N2
+void task_02()
+{
+    setlocale(LC_ALL, "Rus");
+    cout << "\nПерестановка элементов двунаправленного списка с числами Фибоначчи впереди.\n";
+
+    list<int> inputList; // Исходный двунаправленный список
+    int n, num;
+
+    // Ввод количества элементов списка
+    cout << "Введите количество элементов списка: ";
+    cin >> n;
+    cout << "Введите элементы списка:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> num;
+        inputList.push_back(num); // Добавляем введенное число в список
+    }
+
+    // Перестановка элементов с числами Фибоначчи впереди
+    list<int> reorderedList = reorderList(inputList);
+
+    // Вывод результата после перестановки
+    cout << "\nРезультат перестановки:\n";
+    for (int num : reorderedList)
+    {
+        cout << num << " ";
+    }
+    cout << endl;
+}
+
+
+
+
+
+
+
+
+/*
+    Номер 3
+
+    Дано дерево двоичного поиска. Если все элементы дерева кратны 7, то заменить все
+    отрицательные элементы их модулями.
+*/
+
+// Структура узла дерева
+struct Tree
+{
+    int data;               // Значение узла
+    Tree* left;             // Левый потомок
+    Tree* right;            // Правый потомок
+    // Конструктор узла с инициализацией
+    Tree(int value) : data(value), left(nullptr), right(nullptr) {}
+};
+
+// Функция для вставки элемента в дерево двоичного поиска
+Tree* insert(Tree* root, int value)
+{
+    // Если корень пуст, создаем новый узел
+    if (root == nullptr) return new Tree(value);
+    // Рекурсивно вставляем элемент в левое или правое поддерево
+    if (value < root->data)
+        root->left = insert(root->left, value);
+    else
+        root->right = insert(root->right, value);
+    return root;
+}
+
+// Функция для проверки кратности всех элементов 7
+bool Multi7(Tree* root)
+{
+    // Пустое дерево считается удовлетворяющим условию
+    if (root == nullptr) return true;
+    // Если хотя бы один элемент не кратен 7, возвращаем false
+    if (root->data % 7 != 0) return false;
+    // Рекурсивная проверка левого и правого поддерева
+    return Multi7(root->left) && Multi7(root->right);
+}
+
+// Замена всех отрицательных элементов на их модули
+void replaceAbs(Tree* root)
+{
+    if (root == nullptr) return;
+    // Если значение отрицательное, заменяем на модуль
+    if (root->data < 0) root->data = abs(root->data);
+    // Рекурсивная замена в левом и правом поддереве
+    replaceAbs(root->left);
+    replaceAbs(root->right);
+}
+
+// Обход дерева в порядке возрастания (симметричный обход)
+void inorder(Tree* root)
+{
+    if (root != nullptr)
+    {
+        inorder(root->left);           // Обход левого поддерева
+        cout << root->data << " ";     // Вывод значения текущего узла
+        inorder(root->right);          // Обход правого поддерева
+    }
+}
+
+// Основная функция для задачи №3
+void task_03()
+{
+    setlocale(LC_ALL, "Rus");
+    Tree* root = nullptr;
+    int n, value;
+
+    // Ввод количества элементов дерева
+    cout << "Введите количество элементов дерева: ";
+    cin >> n;
+    cout << "Введите элементы дерева:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> value;
+        root = insert(root, value);    // Вставка элемента в дерево
+    }
+
+    // Проверка на кратность всех элементов 7
+    if (Multi7(root))
+    {
+        replaceAbs(root);
+        cout << "\nВсе элементы дерева кратны 7. Отрицательные числа заменены модулями.\n";
+    }
+    else
+    {
+        cout << "\nНе все элементы дерева кратны 7. Замена не выполнена.\n";
+    }
+
+    // Вывод отсортированного дерева
+    cout << "\nОбход дерева по возрастанию:\n";
+    inorder(root);
+    cout << endl;
+}
+
+
+
+/*
+    Номер 4
+    Дан текстовый файл. Преобразовать строки файла, удалив после каждой цифры 2 символа,
+    если эти символы не буквы.
+
+*/
+
+// Функция для преобразования строки: удаление символов после цифры
+string transformLine(const string& line)
+{
+    string result; // Переменная для хранения преобразованной строки
+
+    // Проходим по каждому символу строки
+    for (size_t i = 0; i < line.length(); i++)
+    {
+        result += line[i]; // Добавление текущий символ в результат
+
+        // Проверяем, является ли символ цифрой
+        if (isdigit(line[i]))
+        {
+            int skip = 0; // Счётчик для проверки символов после цифры
+
+            // Проверяем следующие два символа после цифры
+            for (int j = 1; j <= 2 && i + j < line.length(); j++)
+            {
+                // Если символ не является буквой, увеличиваем счётчик
+                if (!isalpha(line[i + j]))
+                {
+                    skip++;
+                }
+            }
+            // Если оба следующих символа не буквы, пропускаем их
+            if (skip == 2) i += 2;
+        }
+    }
+    return result; // Возвращение преобразованную строку
+}
+
+// Основная функция задачи №4
+void task_04()
+{
+    setlocale(LC_ALL, "Rus");
+    string inputFileName = "input.txt";  // Имя входного файла
+    string outputFileName = "output.txt"; // Имя выходного файла
+
+    ifstream inputFile(inputFileName); // Открываем входной файл для чтения
+
+    // Если входной файл не найден, создаём пустой файл
+    if (!inputFile)
+    {
+        ofstream createInput(inputFileName);
+        if (createInput)
+        {
+            cout << "Файл 'input.txt' создан. Заполните его данными и перезапустите программу." << endl;
+            createInput.close();
+        }
+        else
+        {
+            cout << "Ошибка создания входного файла." << endl;
+        }
+        return;
+    }
+
+    ofstream outputFile(outputFileName); // Открываем выходной файл для записи
+    if (!outputFile)
+    {
+        cout << "Ошибка создания выходного файла." << endl;
+        return;
+    }
+
+    string line;
+    // Чтение каждой строки из входного файла
+    while (getline(inputFile, line))
+    {
+        string transformed = transformLine(line); // Преобразуем строку
+        outputFile << transformed << endl; // Записываем в выходной файл
+    }
+
+    // Закрываем файлы после обработки
+    inputFile.close();
+    outputFile.close();
+    cout << "Преобразование завершено. Результат сохранен в 'output.txt'" << endl;
+}
+
+
+
+
+
+
+
+
+/*
+    Номер 5
+    Пусть дан массив a1, ..., an. Требуется переставить a1, ..., an так, чтобы вначале массива шла
+    группа элементов, больших того элемента, который в исходном массиве располагался на первом
+    месте, затем – сам этот элемент, потом – группа элементов, меньших или равных ему.
+
+*/
+
+
+// Функция для перестановки массива в требуемом порядке
+vector<int> rearr(const vector<int>& arr)
+{
+    vector<int> great, less;
+    int spin = arr[0]; // Первый элемент как опорный
+
+    // Разделяем массив на большие и меньшие или равные элементы
+    for (size_t i = 1; i < arr.size(); i++)
+    {
+        if (arr[i] > spin)
+        {
+            great.push_back(arr[i]);
+        }
+        else
+        {
+            less.push_back(arr[i]);
+        }
+    }
+
+    // Формируем итоговый массив: большие -> опорный -> меньшие или равные
+    vector<int> result;
+    result.insert(result.end(), great.begin(), great.end());
+    result.push_back(spin);
+    result.insert(result.end(), less.begin(), less.end());
+
+    return result;
+}
+
+// Основная функция для задачи №5
+void task_05()
+{
+    setlocale(LC_ALL, "Rus");
+    int n, num;
+    vector<int> arr;
+
+    cout << "Введите количество элементов массива: ";
+    cin >> n;
+    cout << "Введите элементы массива:\n";
+    for (int i = 0; i < n; i++)
+    {
+        cin >> num;
+        arr.push_back(num);
+    }
+
+    // Перестановка массива
+    vector<int> rearranged = rearr(arr);
+
+    cout << "\nПреобразованный массив:\n";
+    for (int elem : rearranged)
+    {
+        cout << elem << " ";
+    }
+    cout << endl;
+}
