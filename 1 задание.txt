@@ -1,0 +1,291 @@
+.model small
+.stack 100h
+
+.data
+    ; Главное меню
+    menu db 13,10, 'Choose an action:', 13,10
+         db '1 - Display array forward', 13,10
+         db '2 - Display array backward', 13,10
+         db '3 - Find maximum element', 13,10
+         db '4 - Find minimum element', 13,10
+         db '5 - Calculate sum of elements', 13,10
+         db '6 - Count even numbers', 13,10
+         db '7 - Count negative numbers', 13,10
+         db '0 - Exit program', 13,10, '$'
+
+    ; Сообщения перед действиями
+    msgEnter db 'Enter 10 numbers (-9 to 9):$'
+    msgMax   db 13,10,'Maximum: $'
+    msgMin   db 13,10,'Minimum: $'
+    msgSum   db 13,10,'Sum: $'
+    msgEven  db 13,10,'Even count: $'
+    msgNeg   db 13,10,'Negative count: $'
+    msgFwd   db 13,10,'Array forward: $'
+    msgBwd   db 13,10,'Array backward: $'
+
+    array db 10 dup(?)        ; Массив из 10 целых чисел
+    signFlag db 0             ; Флаг для запоминания минуса перед цифрой
+
+.code
+start:
+    mov ax, @data             ; Загрузка адреса сегмента данных
+    mov ds, ax                ; Инициализация сегмента данных
+
+    ; --- Ввод массива ---
+    mov ah, 09h
+    lea dx, msgEnter          ; Печать приглашения к вводу
+    int 21h
+
+    mov cx, 10                ; Счётчик — 10 чисел
+    mov si, 0                 ; Индекс массива
+
+read_loop:
+    mov ah, 01h               ; Ввод символа с клавиатуры
+    int 21h
+    cmp al, '-'               ; Проверка: был ли введён минус?
+    jne not_minus
+    mov signFlag, 1           ; Устанавливаем флаг отрицательного числа
+    jmp read_loop
+
+not_minus:
+    sub al, '0'               ; Преобразование ASCII → число
+    cmp signFlag, 0
+    jne store_negative
+    jmp store_number
+
+store_negative:
+    neg al                    ; Делает число отрицательным
+    mov signFlag, 0           ; Сброс флага
+
+store_number:
+    mov array[si], al         ; Сохраняем число в массив
+    inc si
+    dec cx
+    cmp cx, 0
+    jne read_loop
+
+; --- Главное меню ---
+main_menu:
+    mov ah, 09h
+    lea dx, menu              ; Печать меню
+    int 21h
+
+    mov ah, 01h               ; Ввод выбора пользователя
+    int 21h
+
+    cmp al, '0'               ; Если 0 — выход
+    jne not0
+    jmp exit_program
+not0:
+    cmp al, '1'
+    jne not1
+    jmp forward
+not1:
+    cmp al, '2'
+    jne not2
+    jmp backward
+not2:
+    cmp al, '3'
+    jne not3
+    jmp find_max
+not3:
+    cmp al, '4'
+    jne not4
+    jmp find_min
+not4:
+    cmp al, '5'
+    jne not5
+    jmp sum_all
+not5:
+    cmp al, '6'
+    jne not6
+    jmp count_even
+not6:
+    cmp al, '7'
+    jne not7
+    jmp count_negative
+not7:
+    jmp main_menu
+
+; --- Вывод массива в прямом порядке ---
+forward:
+    mov ah, 09h
+    lea dx, msgFwd
+    int 21h
+
+    mov cx, 10
+    mov si, 0
+
+f_loop:
+    mov al, array[si]         ; Получаем элемент массива
+    call print_number         ; Печатаем его
+    mov dl, ' '               ; Пробел между числами
+    mov ah, 02h
+    int 21h
+    inc si
+    dec cx
+    cmp cx, 0
+    jne f_loop
+    jmp main_menu
+
+; --- Вывод массива в обратном порядке ---
+backward:
+    mov ah, 09h
+    lea dx, msgBwd
+    int 21h
+
+    mov cx, 10
+    mov si, 9
+
+b_loop:
+    mov al, array[si]
+    call print_number
+    mov dl, ' '
+    mov ah, 02h
+    int 21h
+    dec si
+    dec cx
+    cmp cx, 0
+    jne b_loop
+    jmp main_menu
+
+; --- Поиск максимального ---
+find_max:
+    mov ah, 09h
+    lea dx, msgMax
+    int 21h
+
+    mov cx, 9
+    mov si, 1
+    mov al, array[0]          ; Предполагаем, что максимум — первый элемент
+
+max_loop:
+    cmp al, array[si]
+    jge max_skip              ; Если текущий элемент меньше — пропустить
+    mov al, array[si]         ; Иначе — сохранить как максимум
+max_skip:
+    inc si
+    dec cx
+    cmp cx, 0
+    jne max_loop
+
+    call print_number
+    jmp main_menu
+
+; --- Поиск минимального ---
+find_min:
+    mov ah, 09h
+    lea dx, msgMin
+    int 21h
+
+    mov cx, 9
+    mov si, 1
+    mov al, array[0]
+
+min_loop:
+    cmp al, array[si]
+    jle min_skip
+    mov al, array[si]
+min_skip:
+    inc si
+    dec cx
+    cmp cx, 0
+    jne min_loop
+
+    call print_number
+    jmp main_menu
+
+; --- Сумма всех элементов ---
+sum_all:
+    mov ah, 09h
+    lea dx, msgSum
+    int 21h
+
+    mov cx, 10
+    mov si, 0
+    mov bl, 0                 ; Аккумулятор для суммы
+
+sum_loop:
+    mov al, array[si]
+    add bl, al
+    inc si
+    dec cx
+    cmp cx, 0
+    jne sum_loop
+
+    mov al, bl
+    call print_number
+    jmp main_menu
+
+; --- Подсчёт чётных чисел ---
+count_even:
+    mov ah, 09h
+    lea dx, msgEven
+    int 21h
+
+    mov cx, 10
+    mov si, 0
+    mov bl, 0
+
+even_loop:
+    mov al, array[si]
+    and al, 1                 ; Проверка последнего бита
+    jne even_skip
+    inc bl
+even_skip:
+    inc si
+    dec cx
+    cmp cx, 0
+    jne even_loop
+
+    mov al, bl
+    call print_number
+    jmp main_menu
+
+; --- Подсчёт отрицательных ---
+count_negative:
+    mov ah, 09h
+    lea dx, msgNeg
+    int 21h
+
+    mov cx, 10
+    mov si, 0
+    mov bl, 0
+
+neg_loop:
+    mov al, array[si]
+    cmp al, 0
+    jge neg_skip
+    inc bl
+neg_skip:
+    inc si
+    dec cx
+    cmp cx, 0
+    jne neg_loop
+
+    mov al, bl
+    call print_number
+    jmp main_menu
+
+; --- Вывод числа с учётом знака ---
+print_number:
+    cmp al, 0
+    jge print_pos
+    mov dl, '-'              ; Печатаем минус
+    mov ah, 02h
+    int 21h
+    neg al                   ; Преобразуем в положительное
+
+print_pos:
+    add al, '0'              ; Преобразуем число → ASCII
+    mov dl, al
+    mov ah, 02h
+    int 21h
+    ret
+
+; --- Завершение программы ---
+exit_program:
+    mov ah, 4Ch              ; Функция завершения DOS-программы
+    int 21h
+
+end start

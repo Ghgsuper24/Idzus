@@ -1,0 +1,264 @@
+;──────────────────────────────────────────────────────────────
+;  TASK3.ASM  —  детальный вариант с пошаговыми комментариями
+;──────────────────────────────────────────────────────────────
+CODE    SEGMENT PARA PUBLIC 'CODE'          ; объявляем единственный сегмент
+        ASSUME  CS:CODE, DS:CODE            ; и говорим ассемблеру, что и CS, и DS
+                                            ; указывают на него же — это важно
+ORG     100h                                ; для .COM-файла точка входа = 0100h
+
+start:  jmp     init        ; прыжок сразу в код инициализации (за область данных)
+
+;============================= Д А Н Н Ы Е =============================
+
+promptN db 'Enter N (1..10): $'             ; приглашение размера
+promptEl db 0Dh,0Ah,'A[',0                  ; начало приглашения «A[i,j] = »
+commaChr db ',',0                           ; запятая между i и j
+closeChr db '] = $'                         ; закрывающая скобка и «=»
+
+msgA   db 0Dh,0Ah,'(a) Max above main        = $' ; сообщения-заголовки результатов
+msgB   db 0Dh,0Ah,'(b) Min below secondary   = $'
+msgC   db 0Dh,0Ah,'(c) Sum of diagonals      = $'
+msgD   db 0Dh,0Ah,'(d) Even below main       = $'
+msgE   db 0Dh,0Ah,'(e) Neg above secondary   = $'
+crlf   db 0Dh,0Ah,'$'                        ; перевод строки
+
+inBuf  db 20,0,18 dup (0)                   ; буфер DOS-ввода: max=18 символов
+dec10  dw 10                                ; константа 10 для умножения
+
+Nvalue db 0                                 ; сама N (1…10)
+maxAbove dw 8000h                           ; стартовое «−32768» для максимума
+minBelow dw 7FFFh                           ; стартовое «+32767» для минимума
+sumDiag dw 0                                ; сумма диагоналей
+cntEven dw 0                                ; счётчик чётных
+cntNeg  dw 0                                ; счётчик отрицательных
+
+;========================= П Р О Ц Е Д У Р Ы ===========================
+
+;----- puts: вывести строку DOS-функцией 09h -----------------
+puts    proc near
+        mov     ah,09h          ; DOS fn 09h: вывод $-заканчивающейся строки
+        int     21h
+        ret
+puts    endp
+
+;----- print_int: вывести AX как десятичное число -------------
+print_int proc near
+        push    ax bx cx dx     ; сохраняем все регистры, что будем портить
+        cmp     ax,0            ; проверяем знак
+        jge     pi_abs          ; если число ≥0, сразу к модулю
+        mov     dl,'-'          ; иначе печатаем минус
+        mov     ah,02h
+        int     21h
+        neg     ax              ; берём модуль числа
+pi_abs: xor     cx,cx           ; CX = счётчик цифр
+        mov     bx,10           ; делитель = 10
+pi_loop:
+        xor     dx,dx           ; DX обязательно 0 перед DIV
+        div     bx              ; AX = AX/10, DX = остаток (последняя цифра)
+        push    dx              ; кладём цифру на стек
+        inc     cx              ; увеличиваем количество цифр
+        test    ax,ax
+        jnz     pi_loop         ; пока частное ≠0, продолжаем
+pi_out: pop     dx              ; снимаем цифры в обратном порядке
+        add     dl,'0'          ; переводим 0…9 в код ASCII
+        mov     ah,02h
+        int     21h
+        loop    pi_out          ; печатаем все цифры
+        pop     dx cx bx ax     ; восстанавливаем регистры
+        ret
+print_int endp
+
+;----- read_int: чтение десятичного числа в AX ----------------
+read_int proc near
+        push    bx cx dx si di              ; сохраняем рабочие регистры
+        lea     dx,inBuf                    ; DS:DX → буфер структуры ввода
+        mov     ah,0Ah                      ; DOS fn 0Ah — buffered input
+        int     21h
+
+        mov     cl,[inBuf+1]                ; длина введённой строки
+        mov     si,offset inBuf+2           ; SI → 1-й введённый символ
+        xor     di,di                       ; DI = результат (пока 0)
+        xor     bh,bh                       ; BH = 0 (+), 1 (−)
+
+        cmp     cl,0                        ; ничего не ввели?
+        je      ri_finish                   ; тогда AX=0
+
+        lodsb                               ; AL ← первый символ
+        cmp     al,'-'                      ; проверка минуса
+        jne     ri_chk_plus
+        mov     bh,1                        ; отмечаем знак «−»
+        dec     cl                          ; уменьшаем длину
+        lodsb                               ; берём следующую цифру
+        jmp     ri_digit
+ri_chk_plus:
+        cmp     al,'+'                      ; плюс допускаем, просто игнорируем
+        jne     ri_digit
+        dec     cl
+        lodsb
+ri_digit:
+ri_loop:                                    ; основной цикл по каждой цифре
+        sub     al,'0'                      ; AL → 0…9
+        mov     bl,al                       ; BL = цифра
+        mov     ax,di
+        mul     dec10                       ; (DX:AX)=DI*10
+        add     ax,bx                       ; результат + цифра
+        mov     di,ax
+        dec     cl                          ; уменьшаем оставшуюся длину
+        jz      ri_sign                     ; если всё, выходим
+        lodsb                               ; берём следующую цифру
+        jmp     ri_loop
+ri_sign:
+        cmp     bh,0
+        je      ri_store
+        neg     di                          ; ставим минус
+ri_store:
+        mov     ax,di
+ri_finish:
+        pop     di si dx cx bx              ; восстанавливаем
+        ret
+read_int endp
+
+;============================== К О Д =========================
+
+init:                                       ; точка входа после прыжка
+        push    cs                          ; делаем DS = CS,
+        pop     ds                          ; хотя ASSUME уже сообщил об этом
+
+;--- 1. Ввод N ------------------------------------------------
+        mov     dx,offset promptN           ; вывести приглашение
+        call    puts
+        call    read_int                    ; AX ← введённое N
+        mov     [Nvalue],al                 ; сохраняем
+        mov     bl,al                       ; BL = N
+        xor     bh,bh                       ; BX = N как WORD
+
+;--- 2. Сброс всех счётчиков/границ --------------------------
+        mov     [maxAbove],8000h            ; min int16
+        mov     [minBelow],7FFFh            ; max int16
+        mov     [sumDiag],0
+        mov     [cntEven],0
+        mov     [cntNeg],0
+
+;--- 3. Внешний цикл по строкам (i) --------------------------
+        xor     si,si                       ; SI = i = 0
+row_loop:
+        cmp     si,bx
+        jb      row_body                    ; если i<N
+        jmp     rows_done                   ; иначе конец матрицы
+
+row_body:
+        xor     di,di                       ; DI = j = 0
+;--- 4. Внутренний цикл по столбцам (j) ----------------------
+col_loop:
+        cmp     di,bx
+        jb      elem_prompt                 ; если j<N
+        jmp     next_row
+
+;--- 5. Приглашение и ввод A[i,j] ----------------------------
+elem_prompt:
+        mov     dx,offset promptEl          ; печатаем "A["
+        call    puts
+        mov     ax,si                       ; вывод номера строки i
+        call    print_int
+        mov     dx,offset commaChr
+        call    puts
+        mov     ax,di                       ; вывод номера столбца j
+        call    print_int
+        mov     dx,offset closeChr          ; "] = "
+        call    puts
+
+        call    read_int                    ; AX = значение A[i,j]
+
+;------- (a) Максимум выше главной диагонали (i<j) -----------
+        mov     cx,si
+        cmp     cx,di                       ; i < j ?
+        jge     chk_b                       ; если нет — пропускаем
+        cmp     ax,[maxAbove]
+        jle     chk_b                       ; не больше текущего максимума
+        mov     [maxAbove],ax               ; записали новый максимум
+
+;------- (b) Минимум ниже побочной диагонали -----------------
+chk_b:  mov     cx,bx
+        dec     cx                          ; N-1
+        sub     cx,di                       ; N-1-j
+        cmp     si,cx                       ; i > N-1-j ?
+        jle     chk_c                       ; если условие не выполняется
+        cmp     ax,[minBelow]
+        jge     chk_c                       ; значение не меньше минимума
+        mov     [minBelow],ax               ; обновляем минимум
+
+;------- (c) Сумма двух диагоналей ---------------------------
+chk_c:  cmp     si,di                       ; элемент ли он главной диагонали?
+        jne     chk_sec
+        add     [sumDiag],ax
+chk_sec:
+        mov     cx,bx
+        dec     cx
+        sub     cx,si                       ; cx = N-1-i
+        cmp     di,cx                       ; элемент ли он побочной диагонали?
+        jne     chk_d
+        add     [sumDiag],ax
+
+;------- (d) Чётные ниже главной (i>j и A чётное) ------------
+chk_d:  cmp     si,di
+        jle     chk_e                       ; i<=j — не подходит
+        test    ax,1                        ; чётность
+        jnz     chk_e                       ; нечётное — пропуск
+        inc     [cntEven]                   ; увеличиваем счётчик
+
+;------- (e) Отрицательные выше побочной (i+j < N-1 && <0) ---
+chk_e:  mov     cx,si
+        add     cx,di                       ; cx = i+j
+        mov     dx,bx
+        dec     dx                          ; N-1
+        cmp     cx,dx
+        jge     elem_done                   ; условие i+j < N-1 не выполнено
+        test    ax,ax
+        jge     elem_done                   ; число не отрицательное
+        inc     [cntNeg]                    ; учитываем
+
+elem_done:
+        inc     di                          ; j++
+        jmp     col_loop                    ; назад к столбцам
+
+next_row:
+        inc     si                          ; i++
+        jmp     row_loop                    ; назад к строкам
+
+;--- 6. Вывод итогов ----------------------------------------
+rows_done:
+        mov     dx,offset msgA
+        call    puts
+        mov     ax,[maxAbove]
+        call    print_int
+
+        mov     dx,offset msgB
+        call    puts
+        mov     ax,[minBelow]
+        call    print_int
+
+        mov     dx,offset msgC
+        call    puts
+        mov     ax,[sumDiag]
+        call    print_int
+
+        mov     dx,offset msgD
+        call    puts
+        mov     ax,[cntEven]
+        call    print_int
+
+        mov     dx,offset msgE
+        call    puts
+        mov     ax,[cntNeg]
+        call    print_int
+
+        mov     dx,offset crlf              ; финальный перевод строки
+        call    puts
+
+;--- 7. Завершение программы --------------------------------
+        mov     ax,4C00h
+        int     21h
+
+;========================= К О Н Е Ц =========================
+CODE    ENDS
+        END start
